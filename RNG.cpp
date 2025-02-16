@@ -60,7 +60,7 @@ static inline uint32_t _stm32_rand()
 	HAL_RNG_GenerateRandomNumber(&hrng, &r);
 	return r;
 }
-+#define RNG_WORD_TRNG_GET() (_stm32_rand())
+#define RNG_WORD_TRNG_GET() (_stm32_rand())
 #endif
 #include <string.h>
 
