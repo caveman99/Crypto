@@ -49,6 +49,18 @@
 #define RNG_WORD_TRNG_GET() (esp_random())
 #define RNG_ESP_NVS 1
 #include <nvs.h>
+#elif defined(STM32WLE5xx)
+#include "stm32wlxx_hal_rng.h"
+#define RNG_WORD_TRNG 1
+RNG_HandleTypeDef hrng;
+static inline uint32_t _stm32_rand()
+{
+	uint32_t r;
+	/* FIXME: this can fail if there is not enough entropy. What should we do? */
+	HAL_RNG_GenerateRandomNumber(&hrng, &r);
+	return r;
+}
++#define RNG_WORD_TRNG_GET() (_stm32_rand())
 #endif
 #include <string.h>
 
@@ -99,13 +111,13 @@
  *
  *     // Initialize the random number generator with the application tag
  *     // "MyApp 1.0" and load the previous seed from EEPROM.
- *     RNG.begin("MyApp 1.0");
+ *     CryptRNG.begin("MyApp 1.0");
  *
  *     // Stir in the Ethernet MAC address.
- *     RNG.stir(mac_address, sizeof(mac_address));
+ *     CryptRNG.stir(mac_address, sizeof(mac_address));
  *
  *     // Add the noise source to the list of sources known to RNG.
- *     RNG.addNoiseSource(noise);
+ *     CryptRNG.addNoiseSource(noise);
  *
  *     // ...
  * }
@@ -119,7 +131,7 @@
  *     // ...
  *
  *     // Perform regular housekeeping on the random number generator.
- *     RNG.loop();
+ *     CryptRNG.loop();
  *
  *     // ...
  * }
@@ -351,7 +363,7 @@ static void stirUniqueIdentifier(void)
         ;   // do nothing until FRDY rises.
 
     // Stir the unique identifier into the entropy pool.
-    RNG.stir((uint8_t *)id, sizeof(id));
+    CryptRNG.stir((uint8_t *)id, sizeof(id));
 }
 
 // Erases the flash page containing the seed and then writes the new seed.
@@ -467,6 +479,8 @@ void RNGClass::begin(const char *tag)
     // ESP32's have a MAC address that can be used as a device identifier.
     uint64_t mac = ESP.getEfuseMac();
     stir((const uint8_t *)&mac, sizeof(mac));
+#elif defined(STM32WLE5xx)
+	HAL_RNG_Init(&hrng);
 #else
     // AVR devices don't have anything like a serial number so it is
     // difficult to make every device unique.  Use the compilation
@@ -566,7 +580,7 @@ void RNGClass::setAutoSaveTime(uint16_t minutes)
 void RNGClass::rand(uint8_t *data, size_t len)
 {
     // Make sure that the RNG is initialized in case the application
-    // forgot to call RNG.begin() at startup time.
+    // forgot to call CryptRNG.begin() at startup time.
     if (!initialized)
         begin(0);
 
@@ -579,7 +593,7 @@ void RNGClass::rand(uint8_t *data, size_t len)
     // If we have pending TRNG data from the loop() function,
     // then force a stir on the state.  Otherwise mix in some
     // fresh data from the TRNG because it is possible that
-    // the application forgot to call RNG.loop().
+    // the application forgot to call CryptRNG.loop().
     if (trngPending) {
         stir(0, 0, 0);
         trngPending = 0;
@@ -638,8 +652,8 @@ void RNGClass::rand(uint8_t *data, size_t len)
  * void loop() {
  *     ...
  *
- *     if (!haveKey && RNG.available(sizeof(key))) {
- *         RNG.rand(key, sizeof(key));
+ *     if (!haveKey && CryptRNG.available(sizeof(key))) {
+ *         CryptRNG.rand(key, sizeof(key));
  *         haveKey = true;
  *     }
  *
@@ -680,7 +694,7 @@ bool RNGClass::available(size_t len) const
  * would be called as follows:
  *
  * \code
- * RNG.stir(noise_data, noise_bytes, noise_bytes * 2);
+ * CryptRNG.stir(noise_data, noise_bytes, noise_bytes * 2);
  * \endcode
  *
  * If \a credit is zero, then the \a data will be stirred in but no

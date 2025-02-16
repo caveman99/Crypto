@@ -54,8 +54,8 @@ NoiseSource::~NoiseSource()
  * Noise sources that require calibration start doing so at system startup
  * and then switch over to random data generation once calibration is complete.
  * Since no random data is being generated during calibration, the output
- * from \link RNGClass::rand() RNG.rand()\endlink may be predictable.
- * Use \link RNGClass::available() RNG.available()\endlink to determine
+ * from \link RNGClass::rand() CryptRNG.rand()\endlink may be predictable.
+ * Use \link RNGClass::available() CryptRNG.available()\endlink to determine
  * when sufficient entropy is available to generate good random values.
  *
  * It is possible that the noise source never exits calibration.  This can
@@ -84,10 +84,10 @@ NoiseSource::~NoiseSource()
 
 /**
  * \brief Called when the noise source is added to RNG with
- * \link RNGClass::addNoiseSource() RNG.addNoiseSource()\endlink.
+ * \link RNGClass::addNoiseSource() CryptRNG.addNoiseSource()\endlink.
  *
  * This function is intended for noise source initialization tasks that
- * must be performed after \link RNGClass::begin() RNG.begin()\endlink
+ * must be performed after \link RNGClass::begin() CryptRNG.begin()\endlink
  * has been called to initialize the global random number pool.
  * For example, if the noise source has a unique identifier or serial
  * number then this function can stir it into the pool at startup time.
@@ -107,7 +107,7 @@ void NoiseSource::added()
  * Note that this is bits, not bytes.
  *
  * The default implementation of this function calls
- * \link RNGClass::stir() RNG.stir()\endlink to add the entropy from
+ * \link RNGClass::stir() CryptRNG.stir()\endlink to add the entropy from
  * this noise source to the global random number pool.
  *
  * This function may be overridden by subclasses to capture the raw
@@ -116,5 +116,5 @@ void NoiseSource::added()
  */
 void NoiseSource::output(const uint8_t *data, size_t len, unsigned int credit)
 {
-    RNG.stir(data, len, credit);
+    CryptRNG.stir(data, len, credit);
 }
